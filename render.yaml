@@ -1,0 +1,17 @@
+# ============================================================================
+# Render Blueprint (Infraestructura como Código) para PsychoTrack DB
+# Despliegue permanente 24/7 en la nube (Render.com + Neon DB / Supabase / PostgreSQL)
+# ============================================================================
+services:
+  - type: web
+    name: psychotrack-db
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: PGCRYPTO_CLINICAL_KEY
+        value: PsychoTrack_AES256_ClinicalKey_2026!
+      # Si conectas Neon DB o Supabase, pega tu cadena postgresql:// en DATABASE_URL desde el panel de Render

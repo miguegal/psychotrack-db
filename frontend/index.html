@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PsychoTrack DB — Plataforma de Seguimiento Psicológico y Evaluación Terapéutica</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Modern Web Guidance: responsive-table pattern with sticky headers and container queries */
+    .table-wrapper {
+      overflow: auto;
+      max-inline-size: 100%;
+      max-block-size: min(560px, 80vh);
+      container-type: inline-size;
+    }
+    .table-wrapper table {
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+    .table-wrapper thead {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+    }
+    .table-wrapper tbody th {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: #ffffff;
+    }
+    @container (width < 600px) {
+      .table-wrapper table,
+      .table-wrapper thead,
+      .table-wrapper tbody,
+      .table-wrapper tr,
+      .table-wrapper th,
+      .table-wrapper td {
+        display: block;
+      }
+      .table-wrapper thead {
+        display: none;
+      }
+      .table-wrapper tr {
+        margin-block-end: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        background: #ffffff;
+      }
+      .table-wrapper tbody th {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+        background: #f8fafc;
+      }
+      .table-wrapper td[data-label]::before {
+        content: attr(data-label) ": ";
+        font-weight: 600;
+        color: #475569;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 antialiased flex flex-col">
+
+  <!-- Notificación Toast Flotante -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 max-w-md hidden"></div>
+
+  <!-- =========================================================================
+       CONTENEDOR PRINCIPAL DE VISTAS POR NIVEL DE ACCESO (RBAC)
+       ========================================================================= -->
+  <main class="flex-1 py-6 px-4 sm:px-6 max-w-7xl w-full mx-auto">
+
+    <!-- =======================================================================
+         MOCKUP 1: PANTALLA DE AUTENTICACIÓN Y CONTROL DE ACCESO (RBAC)
+         (Página 12 del PDF - Sin barra superior, tarjeta centrada limpia)
+         ======================================================================= -->
+    <section id="vista-login" class="py-6 flex flex-col items-center justify-center min-h-[88vh]">
+      <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <!-- Encabezado Oscuro (Idéntico al Mockup 1) -->
+        <div class="bg-[#111c35] px-8 py-7 text-center text-white">
+          <div class="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center mx-auto mb-3">
+            <i class="fa-solid fa-shield-halved text-blue-400 text-2xl"></i>
+          </div>
+          <h1 class="text-2xl font-extrabold tracking-tight">PsychoTrack DB</h1>
+          <p class="text-xs text-slate-300 mt-1">Control de Acceso Clínico &amp; Autenticación Criptográfica</p>
+        </div>
+
+        <!-- Cuerpo de la Tarjeta -->
+        <div class="p-7 space-y-5">
+          <!-- Banner de Seguridad Criptográfica Activa -->
+          <div class="bg-blue-50/90 border border-blue-200 rounded-xl p-3.5 flex items-start gap-3">
+            <i class="fa-solid fa-key text-blue-600 mt-0.5 text-sm"></i>
+            <p class="text-xs text-blue-900 leading-relaxed">
+              <strong class="font-semibold">Seguridad Criptográfica Activa:</strong> Autenticación protegida con
+              <span class="font-mono">salt</span> y <span class="font-mono">hash SHA-256</span>. Sesión sujeta a permisos RBAC.
+            </p>
+          </div>
+
+          <form id="form-login-rbac" onsubmit="ejecutarLoginRBAC(event)" class="space-y-4">
+            <!-- Cédula / Identificador de Usuario -->
+            <div>
+              <label for="login-identificador" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Cédula / Identificador de Usuario
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <i class="fa-solid fa-user-check text-sm"></i>
+                </span>
+                <input id="login-identificador" type="text" value="TER-84920-GDL" required
+                  placeholder="Ej. TER-84920-GDL"
+                  class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white" />
+              </div>
+            </div>
+
+            <!-- Contraseña -->
+            <div>
+              <label for="login-password" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Contraseña
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <i class="fa-solid fa-lock text-sm"></i>
+                </span>
+                <input id="login-password" type="password" value="Psycho2026!" required
+                  class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white" />
+              </div>
+            </div>
+
+            <!-- Rol Operativo (Principio de Menor Privilegio) -->
+            <div>
+              <label for="login-rol" class="block text-[11px] font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Rol Operativo (Principio de Menor Privilegio)
+              </label>
+              <select id="login-rol"
+                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white">
+                <option value="rol_terapeuta">Terapeuta Clínico (Acceso RLS a pacientes asignados)</option>
+                <option value="rol_paciente">Paciente / Consultante (Portal personal y autoevaluación RLS)</option>
+                <option value="rol_supervisor">Supervisor Clínico (Consulta analítica global y alertas)</option>
+                <option value="rol_recepcion">Recepción y Citas (Solo agenda y contacto • Sin notas)</option>
+                <option value="rol_auditor">Auditoría / Dirección (Indicadores agregados anonimizados)</option>
+                <option value="rol_dba_admin">Administrador de Base de Datos (Consola DBA y DRP)</option>
+              </select>
+            </div>
+
+            <!-- Botón Ingresar al Sistema Seguro -->
+            <button type="submit"
+              class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold rounded-lg shadow-md transition flex items-center justify-center gap-2 text-sm">
+              <span>Ingresar al Sistema Seguro</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </form>
+
+          <!-- Resultado de Verificación SHA-256 en vivo -->
+          <div id="login-hash-feedback" class="hidden rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-900 font-mono"></div>
+
+          <!-- Pie con canal TLS 1.3 -->
+          <div class="pt-3 border-t border-slate-100 text-center flex items-center justify-center gap-2 text-xs text-slate-500">
+            <i class="fa-solid fa-lock text-emerald-600"></i>
+            <span>Conexión cifrada TLS 1.3 con PostgreSQL Server</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         MOCKUP 2: DASHBOARD DEL TERAPEUTA CON SEGURIDAD POR FILAS (RLS)
+         (Nivel de Acceso Exclusivo: rol_terapeuta)
+         ======================================================================= -->
+    <section id="vista-terapeuta" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+        <!-- Cabecera del Panel Clínico del Terapeuta -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+          <div>
+            <div class="flex flex-wrap items-center gap-3">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900">Panel Clínico del Terapeuta</h1>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <i class="fa-solid fa-shield-check text-emerald-600"></i>
+                RLS Activo (<span class="font-mono" id="rls-current-user-badge">CURRENT_USER</span>)
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1" id="terapeuta-subtitulo">
+              Dr. Alejandro Morales Ramos • Céd. Prof. 84920 • Especialidad: Terapia Cognitivo-Conductual
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button onclick="abrirModalNuevaSesion()"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition flex items-center gap-2">
+              <i class="fa-solid fa-plus"></i>
+              <span>Nueva Sesión / Test</span>
+            </button>
+            <button onclick="toggleAgendaTerapeuta()"
+              class="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs sm:text-sm font-semibold rounded-lg transition flex items-center gap-2">
+              <i class="fa-regular fa-calendar-check"></i>
+              <span>Agenda</span>
+            </button>
+            <button onclick="cerrarSesionRBAC()"
+              class="px-3.5 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold rounded-lg transition flex items-center gap-1.5"
+              title="Cerrar sesión segura">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span>Salir</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Tarjetas de Métricas KPI (Idénticas al Mockup 2) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- KPI 1: Mis Pacientes -->
+          <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200 flex items-center gap-4">
+            <div class="w-11 h-11 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-users text-lg"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Mis Pacientes</p>
+              <p class="text-2xl font-extrabold text-slate-900" id="kpi-mis-pacientes">18</p>
+              <p class="text-[11px] text-slate-500" id="kpi-rls-sub">Filtrados por políticas RLS</p>
+            </div>
+          </div>
+
+          <!-- KPI 2: Sesiones Hoy -->
+          <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200 flex items-center gap-4">
+            <div class="w-11 h-11 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+              <i class="fa-regular fa-calendar-days text-lg"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Sesiones Hoy</p>
+              <p class="text-2xl font-extrabold text-slate-900" id="kpi-sesiones-hoy">5</p>
+              <p class="text-[11px] text-slate-500" id="kpi-sesiones-sub">3 completadas • 2 pendientes</p>
+            </div>
+          </div>
+
+          <!-- KPI 3: Promedio Delta BDI -->
+          <div class="bg-slate-50/70 rounded-xl p-4 border border-slate-200 flex items-center gap-4">
+            <div class="w-11 h-11 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-chart-line text-lg"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Promedio Delta BDI</p>
+              <p class="text-2xl font-extrabold text-emerald-600" id="kpi-promedio-delta">-8.4 pts</p>
+              <p class="text-[11px] text-slate-500">Mejoría sintomática global</p>
+            </div>
+          </div>
+
+          <!-- KPI 4: Alertas de Riesgo -->
+          <div class="bg-red-50/80 rounded-xl p-4 border border-red-200 flex items-center gap-4">
+            <div class="w-11 h-11 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-wider text-red-700">Alertas de Riesgo</p>
+              <p class="text-2xl font-extrabold text-red-600" id="kpi-alertas-activas">1 Activa</p>
+              <p class="text-[11px] text-red-600/90">Trigger automático disparado</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Banner de Advertencia Visual Generado por Disparador (Mockup 2) -->
+        <div id="banner-alerta-trigger" class="bg-red-50 border-l-4 border-red-600 rounded-r-xl p-4 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <i class="fa-solid fa-circle-exclamation text-red-600 text-lg mt-0.5"></i>
+            <div>
+              <h2 class="text-xs sm:text-sm font-bold text-red-900 uppercase tracking-wide">
+                ALERTA DISPARADA: Detección de reactivo crítico en escala psicométrica
+              </h2>
+              <p class="text-xs sm:text-sm text-red-800 mt-0.5" id="banner-alerta-mensaje">
+                El paciente <strong>PAC-2026-042 (Exp. #1084)</strong> registró puntuación &ge; 2 en el reactivo de ideación en la sesión de hoy. Se notificó automáticamente al Supervisor Clínico vía API.
+              </p>
+            </div>
+          </div>
+          <button id="btn-revisar-alerta" onclick="abrirRegistroSesion('PAC-2026-042')"
+            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm transition shrink-0">
+            Revisar Registro
+          </button>
+        </div>
+
+        <!-- Panel colapsable de Citas del Día del Terapeuta -->
+        <div id="panel-agenda-terapeuta" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">
+              <i class="fa-regular fa-clock text-blue-600 mr-1"></i> Agenda de Sesiones de Mi Consulta (Filtrada por RLS)
+            </h3>
+            <button onclick="toggleAgendaTerapeuta()" class="text-xs text-slate-500 hover:text-slate-800">&times; Cerrar</button>
+          </div>
+          <p class="text-xs text-slate-600">
+            Seleccione cualquier consultante de la tabla inferior para iniciar su sesión clínica o aplicar instrumento psicométrico.
+          </p>
+        </div>
+
+        <!-- Tabla Mis Pacientes Asignados (Vista Segura con RLS) -->
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <h2 id="pacientes-rls-caption" class="text-sm font-bold text-slate-800">
+              Mis Pacientes Asignados (Vista Segura con RLS)
+            </h2>
+            <span class="text-xs text-slate-500 italic">
+              Solo lectura y edición sobre consultantes asignados
+            </span>
+          </div>
+
+          <div tabindex="0" role="region" aria-labelledby="pacientes-rls-caption" class="table-wrapper">
+            <table class="text-left text-xs sm:text-sm">
+              <thead class="bg-slate-100/90 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-3.5 px-5">ID Paciente</th>
+                  <th class="py-3.5 px-4">Nombre / Referencia</th>
+                  <th class="py-3.5 px-4">Diagnóstico (DSM-5)</th>
+                  <th class="py-3.5 px-4">Sesiones</th>
+                  <th class="py-3.5 px-4">Último Test</th>
+                  <th class="py-3.5 px-4">Delta Psicométrico</th>
+                  <th class="py-3.5 px-5 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pacientes-rls" class="divide-y divide-slate-200 bg-white">
+                <!-- Se puebla dinámicamente según el terapeuta autenticado -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         MOCKUP 3: CAPTURA DE TEST PSICOMÉTRICO CON CIFRADO Y TRIGGER ACTIVO
+         (Sub-vista operativa de rol_terapeuta)
+         ======================================================================= -->
+    <section id="vista-sesion" class="hidden space-y-5">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <!-- Encabezado con link de retorno al Dashboard y Expediente Clínico -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+          <div>
+            <button onclick="mostrarVistaSegura('vista-terapeuta')" class="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 mb-1">
+              <i class="fa-solid fa-arrow-left"></i>
+              <span>Volver al Dashboard</span>
+            </button>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Registro de Sesión Clínica y Test Psicométrico
+            </h1>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="text-right">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Expediente Clínico</p>
+              <div class="flex items-center gap-2 mt-1">
+                <select id="select-expediente-activo" onchange="cargarExpedienteEnMockup3(this.value)"
+                  class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 font-mono text-xs font-bold focus:outline-none">
+                </select>
+              </div>
+            </div>
+            <button onclick="cerrarSesionRBAC()"
+              class="px-3 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg transition">
+              <i class="fa-solid fa-right-from-bracket mr-1"></i> Salir
+            </button>
+          </div>
+        </div>
+
+        <!-- Diseño a 2 Columnas (Izquierda: Sesión + Inventario BDI-II | Derecha: SP Delta + Diagnóstico) -->
+        <form id="form-registro-sesion" onsubmit="guardarSesionYDispararTriggers(event)" class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
+          <!-- Columna Izquierda (2/3) -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Bloque 1: Datos de la Sesión Terapéutica y Notas Cifradas -->
+            <div class="border border-slate-200 rounded-xl p-5 space-y-4 bg-white">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h2 class="text-sm font-bold text-slate-900" id="titulo-numero-sesion">Sesión Terapéutica #3</h2>
+                <span class="text-xs text-slate-400" id="fecha-sesion-display">Fecha: 19 de Octubre, 2026</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="input-tecnica" class="block text-xs font-semibold text-slate-600 mb-1">
+                    Enfoque / Técnica Aplicada
+                  </label>
+                  <input id="input-tecnica" type="text" required
+                    value="Reestructuración Cognitiva y Registro de Pensamientos"
+                    class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                </div>
+
+                <div>
+                  <label for="input-cumplimiento" class="block text-xs font-semibold text-slate-600 mb-1">
+                    Cumplimiento de Tareas Intersesión
+                  </label>
+                  <select id="input-cumplimiento"
+                    class="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                    <option value="Parcial (50%)" selected>Parcial (50%)</option>
+                    <option value="Completo (100%)">Completo (100%)</option>
+                    <option value="Mínimo (25%)">Mínimo (25%)</option>
+                    <option value="No cumplido (0%)">No cumplido (0%)</option>
+                    <option value="Sin tarea previa (Sesión Inicial)">Sin tarea previa (Sesión Inicial)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Campo de Notas de Evolución con Cifrado de Columna (pgcrypto) -->
+              <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                  <label for="input-notas-clinicas" class="text-xs font-semibold text-slate-600">
+                    Notas de Evolución Terapéutica
+                  </label>
+                  <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <i class="fa-solid fa-lock text-emerald-600"></i>
+                    Cifrado a nivel de columna (pgcrypto en PostgreSQL)
+                  </span>
+                </div>
+                <textarea id="input-notas-clinicas" rows="3" required
+                  class="w-full p-3.5 bg-emerald-50/40 border border-emerald-300 rounded-lg text-xs sm:text-sm font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                >El paciente refiere incremento en la rumiación nocturna durante la semana. Manifiesta pérdida de interés en actividades escolares y desesperanza marcada. Se abordan distorsiones cognitivas de tipo catastrofización.</textarea>
+                <p class="text-[11px] text-slate-400 mt-1 font-mono truncate" id="preview-ciphertext">
+                  Vista previa en BD (BYTEA AES-256): pgp_sym_encrypt(notas, 'PsychoTrack_AES256_ClinicalKey_2026!')
+                </p>
+              </div>
+            </div>
+
+            <!-- Bloque 2: Inventario de Depresión de Beck (BDI-II) con Trigger en Ítem 9 -->
+            <div class="border border-slate-200 rounded-xl p-5 space-y-5 bg-white">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Inventario de Depresión de Beck (BDI-II)</h2>
+                  <p class="text-xs text-slate-500">Reactivos estandarizados evaluados de 0 a 3</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  21 Ítems
+                </span>
+              </div>
+
+              <!-- Reactivo 1: Tristeza o Estado de Ánimo -->
+              <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <p class="text-xs font-bold text-slate-700">1. Tristeza o Estado de Ánimo:</p>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_1" value="0" class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-800 peer-checked:font-semibold transition">
+                      0 - No triste
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_1" value="1" class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-800 peer-checked:font-semibold transition">
+                      1 - Algo triste
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_1" value="2" checked class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-800 peer-checked:font-semibold transition">
+                      2 - Muy triste
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_1" value="3" class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-800 peer-checked:font-semibold transition">
+                      3 - Insoportable
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Reactivo 9: Pensamientos o Deseos de Autolesión / Ideación (Ítem Crítico con Trigger Activo) -->
+              <div id="contenedor-item-9" class="p-4 rounded-xl bg-red-50/70 border-2 border-red-300 space-y-3 transition">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-xs font-bold text-red-900">
+                    9. Pensamientos o Deseos de Autolesión / Ideación (Ítem Crítico):
+                  </p>
+                  <span id="badge-trigger-item9" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700 border border-red-300">
+                    <i class="fa-solid fa-bolt"></i>
+                    TRIGGER ACTIVO
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_9" value="0" class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 peer-checked:border-emerald-600 peer-checked:bg-emerald-50 peer-checked:text-emerald-900 peer-checked:font-semibold transition">
+                      0 - No tengo ningún pensamiento de ese tipo
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_9" value="1" class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-700 peer-checked:border-amber-600 peer-checked:bg-amber-50 peer-checked:text-amber-900 peer-checked:font-semibold transition">
+                      1 - Tengo pensamientos, pero no lo haría
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_9" value="2" checked class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-red-300 bg-white text-xs text-slate-700 peer-checked:border-red-600 peer-checked:bg-red-100 peer-checked:text-red-900 peer-checked:font-bold transition">
+                      2 - Desearía hacerlo (Alerta disparada)
+                    </div>
+                  </label>
+                  <label class="cursor-pointer">
+                    <input type="radio" name="item_9" value="3" class="peer sr-only" onchange="recalcularPuntajeYTriggerEnVivo()" />
+                    <div class="p-2.5 rounded-lg border border-red-300 bg-white text-xs text-slate-700 peer-checked:border-red-700 peer-checked:bg-red-200 peer-checked:text-red-950 peer-checked:font-bold transition">
+                      3 - Lo haría si tuviera la oportunidad
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Ajuste de Sumatoria Restante de los 19 Reactivos Complementarios del BDI-II -->
+              <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <label for="input-resto-reactivos" class="text-xs font-semibold text-slate-700">
+                    Sumatoria de los 19 reactivos restantes del BDI-II (Ítems 2 al 8 y 10 al 21):
+                  </label>
+                  <p class="text-[11px] text-slate-500">Modifica el valor para observar en tiempo real la ejecución de <code class="font-mono">sp_calcular_delta_psicometrico()</code></p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input id="input-resto-reactivos" type="number" min="0" max="57" value="24"
+                    oninput="recalcularPuntajeYTriggerEnVivo()"
+                    class="w-20 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                  <span class="text-xs font-semibold text-slate-500">pts</span>
+                </div>
+              </div>
+
+              <!-- Botones de Acción del Formulario -->
+              <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="mostrarVistaSegura('vista-terapeuta')"
+                  class="px-4 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition">
+                  Cancelar
+                </button>
+                <button type="submit"
+                  class="px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-md transition flex items-center gap-2">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span>Registrar Sesión y Ejecutar Triggers</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna Derecha (1/3): Panel Lateral del Procedimiento Almacenado (Δ) y Diagnóstico Primario -->
+          <div class="space-y-5">
+            <!-- Tarjeta 1: Cálculo Longitudinal Automático (Mockup 3) -->
+            <div class="bg-slate-50 rounded-xl p-5 border border-slate-200 space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 class="text-sm font-bold text-slate-900">Cálculo Longitudinal Automático</h3>
+                <i class="fa-solid fa-calculator text-blue-600"></i>
+              </div>
+
+              <div class="space-y-3 text-xs sm:text-sm">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500">Puntaje Inicial (Sesión 1):</span>
+                  <span class="font-bold text-slate-800" id="sp-puntaje-inicial">24 pts (Moderado)</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500" id="sp-label-sesion-actual">Puntaje Actual (Sesión 3):</span>
+                  <span class="font-bold text-red-600" id="sp-puntaje-actual">28 pts (Severo)</span>
+                </div>
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-between">
+                  <span class="font-bold text-slate-800">Delta Psicométrico (&Delta;):</span>
+                  <span id="sp-delta-badge" class="px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                    +4 pts (Regresión)
+                  </span>
+                </div>
+              </div>
+
+              <div class="bg-blue-50/80 border border-blue-200 rounded-lg p-3 text-[11px] text-blue-900 leading-relaxed">
+                <i class="fa-solid fa-code text-blue-600 mr-1"></i>
+                Calculado automáticamente por el procedimiento almacenado
+                <code class="font-mono font-bold text-blue-800">sp_calcular_delta_psicometrico()</code> en PostgreSQL.
+              </div>
+            </div>
+
+            <!-- Tarjeta 2: Diagnóstico Primario Activo (Mockup 3) -->
+            <div class="bg-white rounded-xl p-5 border border-slate-200 space-y-2.5">
+              <h3 class="text-sm font-bold text-slate-900">Diagnóstico Primario Activo</h3>
+              <p class="text-xs font-bold text-blue-700" id="diag-codigo-dsm">F32.2 (DSM-5)</p>
+              <p class="text-sm font-bold text-slate-800" id="diag-nombre-trastorno">
+                Trastorno Depresivo Mayor, Episodio Único, Grave
+              </p>
+              <p class="text-xs text-slate-500 leading-relaxed" id="diag-plan-resumen">
+                Plan de Intervención: 10 sesiones estimadas con enfoque TCC.
+              </p>
+            </div>
+
+            <!-- Tarjeta 3: Bitácora Histórica Descifrada con pgcrypto -->
+            <div class="bg-white rounded-xl p-5 border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Historial de Notas Descifradas (pgcrypto)
+                </h3>
+                <span class="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
+                  AES-256
+                </span>
+              </div>
+              <div id="lista-historial-sesiones" class="space-y-2.5 max-h-60 overflow-y-auto pr-1 text-xs"></div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         MOCKUP 4: CONSOLA DE ADMINISTRACIÓN DE BASE DE DATOS Y PLANES DE RESPALDO (DBA)
+         (Nivel de Acceso Exclusivo: rol_dba_admin)
+         ======================================================================= -->
+    <section id="vista-dba" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <!-- Cabecera Oscura de la Consola de Administración de Base de Datos (Idéntica al Mockup 4) -->
+        <div class="bg-[#111c35] px-6 py-5 text-white flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
+              <i class="fa-solid fa-server text-lg"></i>
+            </div>
+            <div>
+              <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">
+                Consola de Administración de Base de Datos
+              </h1>
+              <p class="text-xs text-slate-300 font-mono" id="dba-motor-subtitulo">
+                PostgreSQL 16.2+ • Servidor: Primary-Node (localhost:5432) • Modo: Read/Write ACID
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Motor en Línea (OK)
+            </span>
+            <button onclick="cerrarSesionRBAC()"
+              class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold transition flex items-center gap-1.5">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+          <!-- 4 Tarjetas de Métricas DRP y Conexiones (Idénticas al Mockup 4) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">RPO Comprometido</p>
+              <p class="text-2xl font-extrabold text-slate-900 mt-1" id="dba-rpo">1.0 Hora</p>
+              <p class="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                <i class="fa-solid fa-check"></i>
+                <span>Cumplimiento 100% (WAL)</span>
+              </p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">RTO Objetivo</p>
+              <p class="text-2xl font-extrabold text-slate-900 mt-1" id="dba-rto">&lt; 2.0 Horas</p>
+              <p class="text-xs text-blue-600 font-medium mt-1">Validado en simulacro</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Último Respaldo Completo</p>
+              <p class="text-base font-extrabold text-slate-900 mt-1.5" id="dba-ultimo-backup">Domingo 18 Oct, 03:00</p>
+              <p class="text-xs text-slate-500 mt-1 font-mono">pg_dump (Lógico comprimido)</p>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Conexiones Activas</p>
+              <p class="text-2xl font-extrabold text-slate-900 mt-1" id="dba-conexiones">14 / 100</p>
+              <p class="text-xs text-slate-500 mt-1">Pool SQLAlchemy en rango</p>
+            </div>
+          </div>
+
+          <!-- Dos Paneles Centrales: Esquema de Respaldo y Contingencia | Matriz de Roles Activos (RBAC) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Panel Izquierdo: Esquema de Respaldo y Contingencia -->
+            <div class="border border-slate-200 rounded-xl p-5 flex flex-col justify-between space-y-5">
+              <div class="space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h2 class="text-sm font-bold text-slate-900">Esquema de Respaldo y Contingencia</h2>
+                  <i class="fa-solid fa-shield-heart text-blue-600"></i>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid fa-floppy-disk"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs sm:text-sm font-bold text-slate-800">Respaldo Completo Semanal</p>
+                      <p class="text-[11px] text-slate-500">Programado domingos 03:00 hrs • Destino: <code class="font-mono">/backups/full/</code></p>
+                    </div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    Activo
+                  </span>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs sm:text-sm font-bold text-slate-800">Respaldo Diferencial Diario</p>
+                      <p class="text-[11px] text-slate-500">Lunes a Sábado 23:00 hrs • Acumulativo de deltas</p>
+                    </div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    Activo
+                  </span>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 flex items-center justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                      <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div>
+                      <p class="text-xs sm:text-sm font-bold text-blue-950">Archivado WAL Continuo (Point-in-Time)</p>
+                      <p class="text-[11px] text-blue-700">Sincronización hacia repositorio remoto aislado (Air-gapped)</p>
+                    </div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    Activo
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-3 pt-2">
+                <button onclick="dispararBackupManualDBA()"
+                  class="flex-1 py-2.5 px-4 bg-[#111c35] hover:bg-slate-800 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-play text-emerald-400"></i>
+                  <span>Disparar Backup Manual (Consistente)</span>
+                </button>
+                <button onclick="mostrarModalBitacoraWAL()"
+                  class="py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold rounded-lg transition">
+                  Ver Bitácoras WAL
+                </button>
+              </div>
+            </div>
+
+            <!-- Panel Derecho: Matriz de Roles Activos (RBAC en PostgreSQL) -->
+            <div class="border border-slate-200 rounded-xl p-5 flex flex-col justify-between space-y-4">
+              <div>
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                  <h2 id="rbac-matrix-caption" class="text-sm font-bold text-slate-900">
+                    Matriz de Roles Activos (RBAC en PostgreSQL)
+                  </h2>
+                  <i class="fa-solid fa-user-lock text-blue-600"></i>
+                </div>
+
+                <div tabindex="0" role="region" aria-labelledby="rbac-matrix-caption" class="table-wrapper">
+                  <table class="text-left text-xs">
+                    <thead class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                      <tr>
+                        <th class="py-2.5 px-3">Rol</th>
+                        <th class="py-2.5 px-3">DQL / DML</th>
+                        <th class="py-2.5 px-3">DDL</th>
+                        <th class="py-2.5 px-3">Seguridad</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                      <tr>
+                        <th class="py-3 px-3 font-mono font-bold text-blue-700">rol_terapeuta</th>
+                        <td data-label="DQL / DML" class="py-3 px-3 text-slate-700">SELECT, INSERT, UPDATE</td>
+                        <td data-label="DDL" class="py-3 px-3 text-red-600 font-semibold">&times; Denegado</td>
+                        <td data-label="Seguridad" class="py-3 px-3">
+                          <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-semibold">RLS Habilitado</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="py-3 px-3 font-mono font-bold text-purple-700">rol_supervisor</th>
+                        <td data-label="DQL / DML" class="py-3 px-3 text-slate-700">SELECT (Analítico global)</td>
+                        <td data-label="DDL" class="py-3 px-3 text-red-600 font-semibold">&times; Denegado</td>
+                        <td data-label="Seguridad" class="py-3 px-3">
+                          <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold">Auditoría Médica</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="py-3 px-3 font-mono font-bold text-amber-700">rol_recepcion</th>
+                        <td data-label="DQL / DML" class="py-3 px-3 text-slate-700">SELECT, UPDATE (Solo citas)</td>
+                        <td data-label="DDL" class="py-3 px-3 text-red-600 font-semibold">&times; Denegado</td>
+                        <td data-label="Seguridad" class="py-3 px-3">
+                          <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 font-semibold">Sin acceso a notas</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="py-3 px-3 font-mono font-bold text-slate-700">rol_auditor</th>
+                        <td data-label="DQL / DML" class="py-3 px-3 text-slate-700">SELECT (Agregados)</td>
+                        <td data-label="DDL" class="py-3 px-3 text-red-600 font-semibold">&times; Denegado</td>
+                        <td data-label="Seguridad" class="py-3 px-3">
+                          <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-300 font-semibold">Vistas Anonimizadas</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th class="py-3 px-3 font-mono font-bold text-emerald-700">rol_dba_admin</th>
+                        <td data-label="DQL / DML" class="py-3 px-3 font-semibold text-slate-900">Control Total</td>
+                        <td data-label="DDL" class="py-3 px-3 font-semibold text-emerald-700">CREATE, ALTER, DROP</td>
+                        <td data-label="Seguridad" class="py-3 px-3">
+                          <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Superusuario</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <p class="text-[11px] text-slate-400 italic pt-2 border-t border-slate-100">
+                Políticas aplicadas mediante directivas <code class="font-mono">GRANT</code> y <code class="font-mono">REVOKE</code> nativas.
+              </p>
+            </div>
+          </div>
+
+          <!-- Bitácora en Vivo de Respaldos Ejecutados y Hashes SHA-256 -->
+          <div id="panel-bitacora-wal" class="border border-slate-200 rounded-xl overflow-hidden">
+            <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+              <h3 id="wal-table-caption" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Bitácora de Respaldos Híbridos y Segmentos Write-Ahead Logging (WAL)
+              </h3>
+              <span class="text-xs font-mono text-slate-500">Verificación de integridad SHA-256</span>
+            </div>
+            <div tabindex="0" role="region" aria-labelledby="wal-table-caption" class="table-wrapper">
+              <table class="text-left text-xs">
+                <thead class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th class="py-2.5 px-4">ID</th>
+                    <th class="py-2.5 px-4">Tipo de Respaldo</th>
+                    <th class="py-2.5 px-4">Fecha / Ventana</th>
+                    <th class="py-2.5 px-4">Ruta Destino / Medio Air-Gapped</th>
+                    <th class="py-2.5 px-4">Tamaño</th>
+                    <th class="py-2.5 px-4">Hash SHA-256</th>
+                    <th class="py-2.5 px-4">Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-bitacora-drp" class="divide-y divide-slate-200 bg-white"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         VISTA EXCLUSIVA: ROL SUPERVISOR CLÍNICO (rol_supervisor)
+         ======================================================================= -->
+    <section id="vista-supervisor" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900">Panel de Supervisión Clínica y Docencia</h1>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                <i class="fa-solid fa-user-shield mr-1"></i> Rol_Supervisor_Clinico
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1" id="supervisor-subtitulo">
+              Dr. Roberto Guzmán Cárdenas • Céd. Prof. 10200 • Supervisión Clínica y Psiquiatría
+            </p>
+          </div>
+          <button onclick="cerrarSesionRBAC()"
+            class="px-4 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold rounded-lg transition flex items-center gap-2">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+
+        <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-start gap-3">
+          <i class="fa-solid fa-user-graduate text-purple-600 text-lg mt-0.5"></i>
+          <div class="text-xs text-purple-950 space-y-1">
+            <p class="font-bold">Nivel de Acceso de <code class="font-mono">Rol_Supervisor_Clinico</code>:</p>
+            <p>Permisos de consulta analítica global sobre planes de intervención, notas clínicas y atención prioritaria de banderas de emergencia disparadas por el Trigger de riesgo (<code class="font-mono">Ítem 9 BDI-II &ge; 2</code>) con fines de docencia y validación metodológica.</p>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <h2 class="text-sm font-bold text-slate-900">Bandeja de Alertas Críticas Recibidas vía Trigger y API SMTP/SendGrid</h2>
+          <div id="contenedor-alertas-supervisor" class="space-y-3"></div>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <div class="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h3 id="sup-planes-caption" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Supervisión Global de Planes de Intervención (Todos los Terapeutas)
+            </h3>
+          </div>
+          <div tabindex="0" role="region" aria-labelledby="sup-planes-caption" class="table-wrapper">
+            <table class="text-left text-xs">
+              <thead class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-4">Expediente</th>
+                  <th class="py-2.5 px-4">Consultante</th>
+                  <th class="py-2.5 px-4">Terapeuta Titular</th>
+                  <th class="py-2.5 px-4">Diagnóstico DSM-5</th>
+                  <th class="py-2.5 px-4">Enfoque y Objetivos</th>
+                  <th class="py-2.5 px-4">Avance</th>
+                  <th class="py-2.5 px-4">Nivel de Riesgo</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-supervisor-planes" class="divide-y divide-slate-200 bg-white"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         VISTA EXCLUSIVA: ROL RECEPCIÓN Y CITAS (rol_recepcion)
+         ======================================================================= -->
+    <section id="vista-recepcion" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900">Módulo de Recepción y Control de Agenda</h1>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                <i class="fa-solid fa-calendar-check mr-1"></i> Rol_Recepcion_Citas
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1" id="recepcion-subtitulo">
+              Lic. Sofía Herrera Vázquez • Céd. Prof. 50012 • Recepción y Control de Agenda Clínica
+            </p>
+          </div>
+          <button onclick="cerrarSesionRBAC()"
+            class="px-4 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold rounded-lg transition flex items-center gap-2">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <i class="fa-solid fa-eye-slash text-amber-600 text-lg mt-0.5"></i>
+          <div class="text-xs text-amber-950 space-y-1">
+            <p class="font-bold">Restricción Estricta de <code class="font-mono">Rol_Recepcion_Citas</code> (<code class="font-mono">vw_agenda_recepcion_segura</code>):</p>
+            <p>Acceso exclusivo a datos de contacto y agenda (<code class="font-mono">SELECT / UPDATE</code> de horarios y estado de cita) <strong>SIN acceso concedido a las tablas de diagnóstico DSM-5, resultados psicométricos ni notas clínicas confidenciales</strong>.</p>
+          </div>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+            <h3 id="rec-agenda-caption" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Control de Agenda y Contacto de Pacientes (Columnas Clínicas Revocadas)
+            </h3>
+            <span class="text-[11px] font-mono text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded">
+              REVOKE SELECT ON diagnostico_dsm, notas_clinicas_cifradas
+            </span>
+          </div>
+          <div tabindex="0" role="region" aria-labelledby="rec-agenda-caption" class="table-wrapper">
+            <table class="text-left text-xs">
+              <thead class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-4">ID Cita</th>
+                  <th class="py-2.5 px-4">Fecha / Hora</th>
+                  <th class="py-2.5 px-4">Paciente</th>
+                  <th class="py-2.5 px-4">Teléfono / Contacto Emergencia</th>
+                  <th class="py-2.5 px-4">Terapeuta Asignado</th>
+                  <th class="py-2.5 px-4">Diagnóstico / Notas</th>
+                  <th class="py-2.5 px-4">Estado de Cita (UPDATE)</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-recepcion-agenda" class="divide-y divide-slate-200 bg-white"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         VISTA EXCLUSIVA: ROL AUDITORÍA Y DIRECCIÓN (rol_auditor)
+         ======================================================================= -->
+    <section id="vista-auditor" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900">Panel de Auditoría e Indicadores Institucionales</h1>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-800 border border-slate-300">
+                <i class="fa-solid fa-chart-pie mr-1"></i> Rol_Auditor_Direccion
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1" id="auditor-subtitulo">
+              Mtro. Carlos Ibarra Montes • Céd. Prof. 30099 • Auditoría Clínica y Dirección Universitaria
+            </p>
+          </div>
+          <button onclick="cerrarSesionRBAC()"
+            class="px-4 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold rounded-lg transition flex items-center gap-2">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+
+        <div class="bg-slate-100 border border-slate-300 rounded-xl p-4 flex items-start gap-3">
+          <i class="fa-solid fa-chart-column text-slate-700 text-lg mt-0.5"></i>
+          <div class="text-xs text-slate-800 space-y-1">
+            <p class="font-bold">Privilegios de <code class="font-mono">Rol_Auditor_Direccion</code> (<code class="font-mono">vw_auditoria_indicadores_anonimizados</code>):</p>
+            <p>Privilegios de solo lectura (<code class="font-mono">SELECT</code>) limitados a indicadores agregados anonimizados (tasas de deserción, volumen de consultas y medias psicométricas) sin identidad nominal de los pacientes.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p class="text-[11px] font-bold uppercase text-slate-400">Tasa de Deserción Institucional</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1" id="aud-desercion">4.2% (Retención 95.8%)</p>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p class="text-[11px] font-bold uppercase text-slate-400">Volumen de Consultas Registradas</p>
+            <p class="text-xl font-extrabold text-slate-900 mt-1" id="aud-volumen">10 Sesiones Activas</p>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p class="text-[11px] font-bold uppercase text-slate-400">Media Institucional Delta (&Delta;)</p>
+            <p class="text-xl font-extrabold text-emerald-600 mt-1" id="aud-delta">-7.3 pts (Mejoría)</p>
+          </div>
+        </div>
+
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <div class="bg-slate-50 px-5 py-3 border-b border-slate-200">
+            <h3 id="aud-table-caption" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Indicadores Agregados Anonimizados por Categoría Diagnóstica DSM-5
+            </h3>
+          </div>
+          <div tabindex="0" role="region" aria-labelledby="aud-table-caption" class="table-wrapper">
+            <table class="text-left text-xs">
+              <thead class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-4">Código DSM-5</th>
+                  <th class="py-2.5 px-4">Trastorno Clínico</th>
+                  <th class="py-2.5 px-4">Expedientes Anonimizados</th>
+                  <th class="py-2.5 px-4">Volumen Consultas</th>
+                  <th class="py-2.5 px-4">Media Puntaje Bruto</th>
+                  <th class="py-2.5 px-4">Promedio Delta (&Delta;)</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-auditor-indicadores" class="divide-y divide-slate-200 bg-white"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         VISTA EXCLUSIVA: PORTAL DEL PACIENTE / CONSULTANTE (rol_paciente)
+         (Aislamiento estricto por id_paciente • Sin acceso a notas clínicas cifradas)
+         ======================================================================= -->
+    <section id="vista-paciente" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+        <!-- Cabecera del Portal del Paciente -->
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200">
+          <div>
+            <div class="flex flex-wrap items-center gap-3">
+              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900">Portal del Consultante</h1>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                <i class="fa-solid fa-user-lock text-teal-600"></i>
+                Acceso Personal RLS (<span class="font-mono" id="pac-id-badge">PAC-2026-042</span>)
+              </span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1" id="pac-subtitulo">
+              Consultante • Seguimiento Terapéutico y Autoevaluación Psicométrica
+            </p>
+          </div>
+
+          <button onclick="cerrarSesionRBAC()"
+            class="px-4 py-2 bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 text-xs sm:text-sm font-semibold rounded-lg transition flex items-center gap-2">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+
+        <!-- Banner de Privacidad y Nivel de Acceso del Paciente -->
+        <div class="bg-teal-50/80 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
+          <i class="fa-solid fa-shield-heart text-teal-600 text-lg mt-0.5"></i>
+          <div class="text-xs text-teal-950 space-y-1">
+            <p class="font-bold">Protección de Datos y Nivel de Acceso (<code class="font-mono">rol_paciente</code>):</p>
+            <p>Usted visualiza exclusivamente el avance de su propio expediente (<code class="font-mono">Row-Level Security</code>), sus metas terapéuticas acordadas, próximas citas y cuestionarios psicométricos. Las notas clínicas del especialista permanecen protegidas mediante cifrado <code class="font-mono">pgcrypto AES-256</code>.</p>
+          </div>
+        </div>
+
+        <!-- 4 Tarjetas KPI del Paciente -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Terapeuta Titular</p>
+            <p class="text-sm font-extrabold text-slate-900 mt-1" id="pac-kpi-terapeuta">Dr. Alejandro Morales</p>
+            <p class="text-[11px] text-slate-500 mt-0.5" id="pac-kpi-especialidad">Terapia Cognitivo-Conductual</p>
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Avance de Mi Plan</p>
+            <p class="text-2xl font-extrabold text-blue-600 mt-1" id="pac-kpi-sesiones">3 / 10</p>
+            <p class="text-[11px] text-slate-500">Sesiones completadas</p>
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Última Evaluación</p>
+            <p class="text-lg font-extrabold text-slate-900 mt-1" id="pac-kpi-ultimo-test">BDI-II (28 pts)</p>
+            <p class="text-[11px] text-slate-500" id="pac-kpi-baremo">Nivel: Severo</p>
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Evolución Longitudinal (&Delta;)</p>
+            <p class="text-xl font-extrabold text-emerald-600 mt-1" id="pac-kpi-delta">-11 pts</p>
+            <p class="text-[11px] text-slate-500">Comparado con Sesión #1</p>
+          </div>
+        </div>
+
+        <!-- Diseño en 2 Columnas: Plan + Historial de Citas | Contestación de Cuestionario Psicométrico -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Columna Izquierda (2/3): Objetivos Terapéuticos y Mis Citas / Tareas -->
+          <div class="lg:col-span-2 space-y-5">
+            <!-- Mi Plan de Intervención -->
+            <div class="border border-slate-200 rounded-xl p-5 space-y-2 bg-slate-50/50">
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-900">
+                  <i class="fa-solid fa-bullseye text-blue-600 mr-1.5"></i> Mis Objetivos Terapéuticos Acordados
+                </h2>
+                <span class="text-xs font-mono text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200" id="pac-enfoque-badge">
+                  Enfoque TCC
+                </span>
+              </div>
+              <p class="text-xs sm:text-sm text-slate-700 leading-relaxed" id="pac-objetivos-texto"></p>
+            </div>
+
+            <!-- Tabla de Mis Sesiones y Tareas Intersesión (Sin notas clínicas del terapeuta) -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+              <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h3 id="pac-sesiones-caption" class="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Mis Sesiones, Próximas Citas y Tareas Intersesión
+                </h3>
+                <span class="text-[11px] font-mono text-slate-500">Notas clínicas privadas ocultas por RBAC</span>
+              </div>
+              <div tabindex="0" role="region" aria-labelledby="pac-sesiones-caption" class="table-wrapper">
+                <table class="text-left text-xs">
+                  <thead class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th class="py-2.5 px-4">Sesión</th>
+                      <th class="py-2.5 px-4">Fecha / Horario</th>
+                      <th class="py-2.5 px-4">Actividad / Técnica Trabajada</th>
+                      <th class="py-2.5 px-4">Avance de Tarea</th>
+                      <th class="py-2.5 px-4">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-paciente-sesiones" class="divide-y divide-slate-200 bg-white"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna Derecha (1/3): Contestar Autoevaluación Psicométrica Remota -->
+          <div class="border border-slate-200 rounded-xl p-5 bg-white space-y-4">
+            <div class="border-b border-slate-100 pb-3">
+              <h2 class="text-sm font-bold text-slate-900">
+                <i class="fa-solid fa-clipboard-question text-teal-600 mr-1.5"></i>
+                Responder Autoevaluación Pre-Sesión
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Sus respuestas actualizan automáticamente su progreso longitudinal (&Delta;) para su próxima consulta.
+              </p>
+            </div>
+
+            <form onsubmit="enviarAutoevaluacionPaciente(event)" class="space-y-4 text-xs">
+              <div>
+                <label for="pac-select-escala" class="block font-semibold text-slate-700 mb-1">Instrumento Asignado</label>
+                <select id="pac-select-escala"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800">
+                  <option value="BDI-II">Inventario de Depresión de Beck (BDI-II)</option>
+                  <option value="HAM-A">Escala de Ansiedad de Hamilton (HAM-A)</option>
+                  <option value="PHQ-9">Cuestionario de Salud del Paciente (PHQ-9)</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="pac-select-tarea" class="block font-semibold text-slate-700 mb-1">
+                  ¿Cómo califica su cumplimiento de tareas esta semana?
+                </label>
+                <select id="pac-select-tarea"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800">
+                  <option value="Completo (100%)">Completo (100%)</option>
+                  <option value="Parcial (50%)" selected>Parcial (50%)</option>
+                  <option value="Mínimo (25%)">Mínimo (25%)</option>
+                  <option value="No cumplido (0%)">No cumplido (0%)</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="pac-item-1" class="block font-semibold text-slate-700 mb-1">
+                  1. Estado de ánimo / Tristeza durante la semana:
+                </label>
+                <select id="pac-item-1"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800">
+                  <option value="0">0 - No me he sentido triste</option>
+                  <option value="1" selected>1 - Me he sentido triste parte del tiempo</option>
+                  <option value="2">2 - Estoy triste todo el tiempo</option>
+                  <option value="3">3 - Estoy tan triste que no lo soporto</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="pac-item-9" class="block font-semibold text-slate-700 mb-1">
+                  9. Pensamientos de autolesión (Detección de apoyo prioritario):
+                </label>
+                <select id="pac-item-9"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-medium text-slate-800">
+                  <option value="0" selected>0 - No tengo ningún pensamiento de ese tipo</option>
+                  <option value="1">1 - Tengo pensamientos, pero no lo haría</option>
+                  <option value="2">2 - Desearía hacerlo (Solicitar apoyo prioritario)</option>
+                  <option value="3">3 - Necesito atención urgente inmediata</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="pac-resto-items" class="block font-semibold text-slate-700 mb-1">
+                  Puntaje de los reactivos complementarios del cuestionario:
+                </label>
+                <input id="pac-resto-items" type="number" min="0" max="50" value="12" required
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900" />
+              </div>
+
+              <button type="submit"
+                class="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Enviar Autoevaluación a Mi Expediente</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/static/app.js?v=3"></script>
+</body>
+</html>
