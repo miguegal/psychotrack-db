@@ -42,7 +42,6 @@ app.add_middleware(
 class LoginRequest(BaseModel):
     identificador: str = Field(..., examples=["TER-84920-GDL"])
     password: str = Field(..., examples=["Psycho2026!"])
-    rol_operativo: str = Field(default="rol_terapeuta", examples=["rol_terapeuta"])
 
 
 class CalculoDeltaRequest(BaseModel):
@@ -90,7 +89,7 @@ def api_login_rbac(payload: LoginRequest):
     resultado = db_manager.autenticar_usuario_rbac(
         identificador=payload.identificador,
         password_plano=payload.password,
-        rol_solicitado=payload.rol_operativo
+        rol_solicitado=None
     )
     if not resultado["autenticado"]:
         raise HTTPException(status_code=401, detail=resultado["error"])

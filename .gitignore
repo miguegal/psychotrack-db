@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .env
 psychotrack_local.db-journal
+venv/
+*.zip

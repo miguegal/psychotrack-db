@@ -113,13 +113,12 @@ async function ejecutarLoginRBAC(event) {
   event.preventDefault();
   const identificador = document.getElementById("login-identificador").value.trim();
   const password = document.getElementById("login-password").value;
-  const rol_operativo = document.getElementById("login-rol").value;
 
   try {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identificador, password, rol_operativo })
+      body: JSON.stringify({ identificador, password })
     });
     const data = await res.json();
     if (!res.ok) {
@@ -143,7 +142,7 @@ async function ejecutarLoginRBAC(event) {
 
     mostrarToast(
       `Acceso Autorizado (${data.rol_activo_sesion})`,
-      `Bienvenido(a) ${data.nombre_completo}. Políticas de Menor Privilegio aplicadas.`,
+      `Bienvenido(a) ${data.nombre_completo}. `,
       "success"
     );
 
@@ -189,7 +188,7 @@ async function cargarDashboardTerapeuta(idTerapeuta) {
     `${data.terapeuta.nombre_completo} • Céd. Prof. ${data.terapeuta.cedula_profesional} • Especialidad: ${data.terapeuta.especialidad_clinica}`;
 
   document.getElementById("kpi-mis-pacientes").textContent = data.kpis.mis_pacientes_rls;
-  document.getElementById("kpi-rls-sub").textContent = "Filtrados por políticas RLS";
+  document.getElementById("kpi-rls-sub").textContent = "Pacientes en seguimiento";
   document.getElementById("kpi-sesiones-hoy").textContent = data.kpis.sesiones_hoy_total;
   document.getElementById("kpi-sesiones-sub").textContent =
     `${data.kpis.sesiones_completadas} completadas • ${data.kpis.sesiones_pendientes} pendientes`;
@@ -474,7 +473,7 @@ async function cargarVistasRolesExtra() {
       ${a.estado_alerta === "Activa" ? `
         <button onclick="atenderAlertaComoSupervisor(${a.id_alerta})"
           class="px-3.5 py-2 rounded-lg bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold shadow-sm transition">
-          Validar y Activar Protocolo Clínico
+          Atender Caso
         </button>
       ` : `<span class="text-xs font-semibold text-emerald-700">✓ Protocolo validado (${a.fecha_atencion || "Hoy"})</span>`}
     </div>
@@ -506,7 +505,7 @@ async function cargarVistasRolesExtra() {
       <td data-label="Terapeuta" class="py-3 px-4 text-slate-700">${ag.terapeuta_nombre}</td>
       <td data-label="Diagnóstico / Notas" class="py-3 px-4">
         <span class="px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 font-mono text-[10px] font-semibold">
-          🔒 BLOQUEADO POR RBAC
+          Privado
         </span>
       </td>
       <td data-label="Estado de Cita" class="py-3 px-4">
@@ -652,3 +651,18 @@ async function enviarAutoevaluacionPaciente(event) {
 document.addEventListener("DOMContentLoaded", () => {
   mostrarVistaSegura("vista-login");
 });
+
+function autocompletarDemo(usuarioId) {
+  document.getElementById("login-identificador").value = usuarioId;
+  document.getElementById("login-password").value = "Psycho2026!";
+  mostrarToast("Credenciales Cargadas", `Listo para iniciar sesión como ${usuarioId}.`, "info");
+}
+
+function filtrarPacientesEnVivo(texto) {
+  const filtro = texto.toLowerCase().trim();
+  const filas = document.querySelectorAll("#tbody-pacientes-rls tr");
+  filas.forEach(fila => {
+    const contenido = fila.innerText.toLowerCase();
+    fila.style.display = contenido.includes(filtro) ? "" : "none";
+  });
+}

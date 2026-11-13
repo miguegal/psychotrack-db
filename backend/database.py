@@ -701,9 +701,12 @@ class PsychoTrackDatabaseManager:
             # 2. Verificar personal clínico / administrativo / DBA en tabla terapeuta
             row = conn.execute(text("""
                 SELECT id_terapeuta, cedula_profesional, nombre_completo, especialidad_clinica,
-                       correo_institucional, usuario_db, rol_operativo, password_salt, password_hash, estado_activo
+                    correo_institucional, usuario_db, rol_operativo, password_salt, password_hash, estado_activo
                 FROM terapeuta
-                WHERE UPPER(id_terapeuta) = UPPER(:id) OR cedula_profesional = :id OR UPPER(usuario_db) = UPPER(:id)
+                WHERE UPPER(id_terapeuta) = UPPER(:id)
+                    OR cedula_profesional = :id
+                    OR UPPER(usuario_db) = UPPER(:id)
+                    OR LOWER(correo_institucional) = LOWER(:id)
                 LIMIT 1
             """), {"id": id_limpio}).mappings().first()
 
