@@ -5,3 +5,4 @@ __pycache__/
 psychotrack_local.db-journal
 venv/
 *.zip
+psychotrack_local.db
