@@ -280,7 +280,7 @@ async function cargarExpedienteEnMockup3(idPaciente) {
   document.getElementById("input-tecnica").value = exp.ultima_sesion_tecnica;
   document.getElementById("input-cumplimiento").value = exp.ultima_sesion_cumplimiento;
   document.getElementById("input-notas-clinicas").value = exp.ultima_sesion_nota;
-  document.getElementById("preview-ciphertext").textContent =
+  const prevCipher = document.getElementById("preview-ciphertext"); if (prevCipher) prevCipher.textContent =
     `Columna cifrada en PostgreSQL (pgcrypto AES-256): ${exp.motivo_consulta_ciphertext}`;
 
   const r1 = document.querySelector(`input[name="item_1"][value="${exp.item_1_actual}"]`);
@@ -325,7 +325,7 @@ async function recalcularPuntajeYTriggerEnVivo() {
   if (item9 >= 2) {
     contItem9.className = "p-4 rounded-xl bg-red-50/80 border-2 border-red-400 space-y-3 transition";
     badgeItem9.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700 border border-red-300";
-    badgeItem9.innerHTML = `<i class="fa-solid fa-bolt"></i> TRIGGER ACTIVO`;
+    badgeItem9.innerHTML = `<i class="fa-solid fa-bolt"></i> Prioritario`;
   } else {
     contItem9.className = "p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 transition";
     badgeItem9.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300";
