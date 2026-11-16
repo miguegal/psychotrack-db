@@ -5,7 +5,9 @@
 **Universidad de Guadalajara — Centro Universitario de Ciencias Exactas e Ingenierías (CUCEI)**  
 **Materia:** Administración de Bases de Datos  
 **Profesor:** Jovan Ricardo Zepeda Gomez  
-**Alumno:** Galvez Arceo Miguel Angel (`220537132`) — Ingeniería Informática
+**Alumnos:** Galvez Arceo Miguel Angel    (`220537132`) — Ingeniería Informática
+             Gómez Comparán Angel         (`216466212`) — Ingeniería Informática
+             Ramirez Aguilar Brenda Sarai (`216466212`) — Ingeniería Informática
 
 ---
 
